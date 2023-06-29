@@ -34,7 +34,7 @@ object ScoverageReport extends BleepScript("ScoverageReport"):
 
     commands.test(
       started.build.explodedProjects
-        .filter((_, project) => !project.isTestProject.getOrElse(false))
+        .filter((_, project) => project.isTestProject.getOrElse(false))
         .keys
         .toList
     )
@@ -50,9 +50,12 @@ object ScoverageReport extends BleepScript("ScoverageReport"):
         val modifiedReport = Files
           .readAllLines(coverageReport)
           .nn
-          .asScala
-          .map: string =>
+          .asScala.view
+          .zipWithIndex
+          .map: (string, line) =>
             if string.startsWith("../") then
+              started.logger.warn(s"${coverageReport}@${line+1} is malformed!!")
+              started.logger.info(s"original line: ${string}")
               started.buildPaths.buildDir
                 .toAbsolutePath()
                 .nn
@@ -66,7 +69,7 @@ object ScoverageReport extends BleepScript("ScoverageReport"):
 
     val coverage = projectPaths
       .map: projectPath =>
-        projectPath.sourcesDirs.all -> projectPath.targetDir / "scoverage-reports"
+        projectPath.sourcesDirs.all -> projectPath.targetDir / "scoverage-report"
       .map: (sources, data) =>
         CoverageAggregator
           .aggregate(
